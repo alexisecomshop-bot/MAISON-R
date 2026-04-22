@@ -1,0 +1,20 @@
+name: Sync products from Google Sheet
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch: {}        # allow manual run from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sync endpoint
+        run: |
+          if [ -z "${{ secrets.SITE_URL }}" ] || [ -z "${{ secrets.SYNC_SECRET }}" ]; then
+            echo "SITE_URL or SYNC_SECRET secret not set — skipping."
+            exit 0
+          fi
+          curl -fSs -X POST \
+            -H "x-sync-secret: ${{ secrets.SYNC_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/sync-products" | tee response.json

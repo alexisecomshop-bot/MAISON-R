@@ -36,6 +36,7 @@ insert into maison_r_site_settings (id) values ('default')
 -- Produits
 create table if not exists maison_r_products (
   id uuid primary key default gen_random_uuid(),
+  sku text,                     -- clé de sync depuis la Google Sheet
   name text not null,
   description text default '',
   brand text not null default '',
@@ -47,9 +48,14 @@ create table if not exists maison_r_products (
   deposit numeric(10,2) not null default 0,
   images text[] default '{}',
   available boolean default true,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
+alter table maison_r_products add column if not exists sku text;
+alter table maison_r_products add column if not exists updated_at timestamptz default now();
+create unique index if not exists idx_maison_r_products_sku
+  on maison_r_products(sku) where sku is not null;
 create index if not exists idx_maison_r_products_category on maison_r_products(category);
 create index if not exists idx_maison_r_products_subcategory on maison_r_products(subcategory);
 create index if not exists idx_maison_r_products_available on maison_r_products(available);
