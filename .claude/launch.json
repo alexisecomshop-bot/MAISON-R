@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "maison-r",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export NVM_DIR=\"$HOME/.nvm\" && . \"$NVM_DIR/nvm.sh\" && cd '/Users/alexisroucher/app paul' && npm run dev"],
+      "port": 3000
+    }
+  ]
+}
