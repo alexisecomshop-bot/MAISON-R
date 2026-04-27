@@ -108,8 +108,14 @@ export async function POST(req: Request) {
     refuseUrl,
   });
 
+  // Owner number priority: DB (admin-editable) → OWNER_WHATSAPP env var (default).
+  // The env-var fallback lets us deploy with the owner's number set in Vercel
+  // before the admin UI is even configured.
+  const ownerNumber =
+    settings?.owner_whatsapp || process.env.OWNER_WHATSAPP || "";
+
   try {
-    await sendWhatsApp(settings?.owner_whatsapp || "", message);
+    await sendWhatsApp(ownerNumber, message);
   } catch (err) {
     console.error("[reservations] WhatsApp send failed:", err);
     // Don't fail the reservation — the admin still sees it in /admin.

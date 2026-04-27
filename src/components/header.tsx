@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CATEGORIES } from "@/lib/categories";
+import { createClient } from "@/lib/supabase-browser";
 import type { SiteSettings } from "@/lib/types";
 
 export function Header({ settings }: { settings: SiteSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (menuOpen) {
@@ -18,6 +20,28 @@ export function Header({ settings }: { settings: SiteSettings }) {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      const supabase = createClient();
+      supabase.auth.getSession().then(({ data }) => {
+        if (!cancelled) setAuthed(!!data.session);
+      });
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!cancelled) setAuthed(!!session);
+      });
+      return () => {
+        cancelled = true;
+        subscription.unsubscribe();
+      };
+    } catch {
+      // Supabase not configured — leave authed as null, show generic link.
+      setAuthed(false);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-[var(--color-bg)] border-b border-black/10">
@@ -55,7 +79,14 @@ export function Header({ settings }: { settings: SiteSettings }) {
           )}
         </Link>
 
-        <div className="flex items-center gap-5 text-sm">
+        <div className="flex items-center gap-4 text-sm">
+          <Link
+            href={authed ? "/mon-compte" : "/connexion"}
+            aria-label={authed ? "Mon compte" : "Se connecter"}
+            className="hover:text-[var(--color-accent)]"
+          >
+            <UserIcon />
+          </Link>
           <Link href="/admin" aria-label="Admin" className="opacity-60 hover:opacity-100">
             ⚙
           </Link>
@@ -107,10 +138,26 @@ export function Header({ settings }: { settings: SiteSettings }) {
               >
                 Contact
               </Link>
+              <Link
+                href={authed ? "/mon-compte" : "/connexion"}
+                className="block uppercase tracking-wider text-sm"
+                onClick={() => setMenuOpen(false)}
+              >
+                {authed ? "Mon compte" : "Connexion"}
+              </Link>
             </div>
           </div>
         </>
       )}
     </header>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4 20c1.5-3.5 4.5-5.5 8-5.5s6.5 2 8 5.5" strokeLinecap="round" />
+    </svg>
   );
 }
