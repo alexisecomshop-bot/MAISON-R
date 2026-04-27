@@ -30,8 +30,10 @@ export type Reservation = {
   end_date: string;
   total_price: number;
   deposit: number;
-  status: "pending" | "accepted" | "refused" | "returned" | "cancelled";
+  status: "pending" | "accepted" | "paid" | "refused" | "returned" | "cancelled";
   action_token: string;
+  payplug_payment_id: string | null;
+  paid_at: string | null;
   created_at: string;
 };
 

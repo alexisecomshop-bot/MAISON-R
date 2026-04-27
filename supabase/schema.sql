@@ -61,6 +61,13 @@ create index if not exists idx_maison_r_products_subcategory on maison_r_product
 create index if not exists idx_maison_r_products_available on maison_r_products(available);
 
 -- Réservations : pas besoin d'auth côté client (l'utilisateur saisit ses infos).
+-- Cycle de vie :
+--   pending  → soumis par le client, en attente du propriétaire
+--   accepted → propriétaire OK, en attente du paiement client (PayPlug)
+--   paid     → client a payé, location confirmée
+--   refused  → propriétaire a refusé, pas de paiement
+--   returned → article retourné OK
+--   cancelled → annulée (par client ou admin)
 create table if not exists maison_r_reservations (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references maison_r_products(id) on delete cascade,
@@ -72,15 +79,25 @@ create table if not exists maison_r_reservations (
   total_price numeric(10,2) not null,
   deposit numeric(10,2) not null default 0,
   status text not null default 'pending'
-    check (status in ('pending', 'accepted', 'refused', 'returned', 'cancelled')),
+    check (status in ('pending', 'accepted', 'paid', 'refused', 'returned', 'cancelled')),
   action_token text not null,  -- token secret utilisé dans le lien WhatsApp
+  payplug_payment_id text,     -- id du paiement PayPlug (pay_xxx)
+  paid_at timestamptz,
   created_at timestamptz default now(),
   constraint valid_dates check (end_date >= start_date)
 );
 
+-- Migrations idempotentes (safe à ré-exécuter)
+alter table maison_r_reservations add column if not exists payplug_payment_id text;
+alter table maison_r_reservations add column if not exists paid_at timestamptz;
+alter table maison_r_reservations drop constraint if exists maison_r_reservations_status_check;
+alter table maison_r_reservations add constraint maison_r_reservations_status_check
+  check (status in ('pending', 'accepted', 'paid', 'refused', 'returned', 'cancelled'));
+
 create index if not exists idx_maison_r_res_product on maison_r_reservations(product_id);
 create index if not exists idx_maison_r_res_status on maison_r_reservations(status);
 create index if not exists idx_maison_r_res_dates on maison_r_reservations(start_date, end_date);
+create index if not exists idx_maison_r_res_payment on maison_r_reservations(payplug_payment_id);
 
 -- ══════════════════════════════════════════════════════════
 -- RLS
@@ -134,7 +151,7 @@ create policy "maison_r_res_admin_all" on maison_r_reservations
 create or replace view maison_r_blocked_dates as
   select product_id, start_date, end_date, status
   from maison_r_reservations
-  where status in ('pending', 'accepted', 'returned');
+  where status in ('pending', 'accepted', 'paid', 'returned');
 
 grant select on maison_r_blocked_dates to anon, authenticated;
 

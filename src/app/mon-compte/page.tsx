@@ -29,7 +29,15 @@ export default async function AccountPage() {
     .eq("customer_email", user.email!)
     .order("created_at", { ascending: false });
 
-  const rows = reservations || [];
+  const rows = (reservations || []) as Array<{
+    id: string;
+    action_token: string;
+    start_date: string;
+    end_date: string;
+    total_price: number;
+    status: string;
+    maison_r_products?: { name?: string } | { name?: string }[];
+  }>;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
@@ -55,16 +63,26 @@ export default async function AccountPage() {
           {rows.map((r) => {
             const productName = Array.isArray(r.maison_r_products)
               ? r.maison_r_products[0]?.name
-              : (r.maison_r_products as { name?: string } | null)?.name;
+              : r.maison_r_products?.name;
             return (
-              <div key={r.id} className="border border-black/10 p-4 flex justify-between items-start gap-4">
-                <div>
+              <div key={r.id} className="border border-black/10 p-4 flex flex-wrap justify-between items-start gap-4">
+                <div className="flex-1 min-w-[200px]">
                   <div className="font-medium">{productName || "—"}</div>
                   <div className="text-sm text-black/70">
                     Du {r.start_date} au {r.end_date} · {r.total_price.toFixed(2)} €
                   </div>
                 </div>
-                <StatusBadge status={r.status} />
+                <div className="flex flex-col items-end gap-2">
+                  <StatusBadge status={r.status} />
+                  {r.status === "accepted" && (
+                    <Link
+                      href={`/paiement/${r.id}?token=${r.action_token}`}
+                      className="bg-[var(--color-primary)] text-white px-4 py-1.5 text-xs uppercase tracking-wider hover:bg-[var(--color-accent)]"
+                    >
+                      Payer
+                    </Link>
+                  )}
+                </div>
               </div>
             );
           })}

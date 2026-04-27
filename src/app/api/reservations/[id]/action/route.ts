@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
+import { sendWhatsApp } from "@/lib/whatsapp";
 
 // Clicked from the WhatsApp message by the owner. Token-authenticated so
 // the owner does not need to log in.
@@ -19,7 +20,7 @@ export async function GET(
   const supabase = createAdminClient();
   const { data: res } = await supabase
     .from("maison_r_reservations")
-    .select("id, status, action_token, customer_name, start_date, end_date, product_id")
+    .select("id, status, action_token, customer_name, customer_phone, start_date, end_date, product_id, total_price")
     .eq("id", id)
     .maybeSingle();
 
@@ -37,10 +38,31 @@ export async function GET(
 
   if (error) return htmlResponse(500, "Erreur lors de la mise à jour.");
 
+  // If accepted, send the customer a WhatsApp with the payment link.
+  if (newStatus === "accepted") {
+    const base = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+    const payUrl = `${base}/paiement/${res.id}?token=${res.action_token}`;
+    const customerMsg = [
+      `Bonne nouvelle ${res.customer_name},`,
+      ``,
+      `Votre demande de location est acceptée :`,
+      `Du ${res.start_date} au ${res.end_date}`,
+      `Total : ${Number(res.total_price).toFixed(2)} €`,
+      ``,
+      `Réglez ici pour confirmer :`,
+      payUrl,
+    ].join("\n");
+    try {
+      await sendWhatsApp(res.customer_phone, customerMsg);
+    } catch (err) {
+      console.error("[action] customer WhatsApp failed:", err);
+    }
+  }
+
   const title = newStatus === "accepted" ? "Demande acceptée" : "Demande refusée";
   const body =
     newStatus === "accepted"
-      ? `La demande de ${res.customer_name} du ${res.start_date} au ${res.end_date} est confirmée.`
+      ? `La demande de ${res.customer_name} du ${res.start_date} au ${res.end_date} est confirmée. Le client a reçu le lien de paiement par WhatsApp.`
       : `La demande de ${res.customer_name} du ${res.start_date} au ${res.end_date} a été refusée.`;
 
   return htmlResponse(200, `${title}\n\n${body}`);

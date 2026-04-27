@@ -16,7 +16,7 @@ export default function ConnexionPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
-  async function oauth(provider: "google" | "apple") {
+  async function oauth(provider: "google") {
     setError("");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
@@ -68,12 +68,6 @@ export default function ConnexionPage() {
       </p>
 
       <div className="space-y-3">
-        <button
-          onClick={() => oauth("apple")}
-          className="w-full flex items-center justify-center gap-3 bg-black text-white py-3 text-sm hover:bg-black/85"
-        >
-          <AppleIcon /> Continuer avec Apple
-        </button>
         <button
           onClick={() => oauth("google")}
           className="w-full flex items-center justify-center gap-3 border border-black/20 py-3 text-sm hover:bg-black/5"
@@ -146,14 +140,6 @@ export default function ConnexionPage() {
           : "Déjà un compte ? Se connecter"}
       </button>
     </div>
-  );
-}
-
-function AppleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12-1.03.39-2.07 1.117-2.91.825-.94 2.236-1.67 3.047-1.74zM21.5 17.36c-.66 1.51-.97 2.18-1.81 3.51-1.18 1.85-2.84 4.16-4.9 4.18-1.83.02-2.3-1.19-4.79-1.18-2.49.01-3 1.2-4.83 1.18-2.06-.02-3.63-2.1-4.81-3.95-3.3-5.17-3.65-11.24-1.61-14.47.92-1.46 2.39-2.31 3.77-2.31 1.41 0 2.29.77 3.46.77 1.13 0 1.82-.77 3.45-.77 1.23 0 2.54.67 3.47 1.83-3.05 1.67-2.55 6.04.6 7.21z" />
-    </svg>
   );
 }
 
