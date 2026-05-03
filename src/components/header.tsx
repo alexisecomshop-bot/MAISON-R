@@ -9,6 +9,7 @@ import type { SiteSettings } from "@/lib/types";
 export function Header({ settings }: { settings: SiteSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     if (menuOpen) {
@@ -71,11 +72,16 @@ export function Header({ settings }: { settings: SiteSettings }) {
           className="font-display text-xl md:text-2xl tracking-wide"
           onClick={() => setMenuOpen(false)}
         >
-          {settings.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={settings.logo_url} alt={settings.site_name} className="h-8" />
-          ) : (
+          {logoFailed ? (
             settings.site_name
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.logo_url || "/logo.png"}
+              alt={settings.site_name}
+              className="h-8"
+              onError={() => setLogoFailed(true)}
+            />
           )}
         </Link>
 
