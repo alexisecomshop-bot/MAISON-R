@@ -28,6 +28,15 @@ body {
 
 .font-display { font-family: var(--font-display); letter-spacing: 0.01em; }
 
+/* Loading logo (pulse) */
+@keyframes pulse-logo {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.96); }
+}
+.animate-pulse-logo {
+  animation: pulse-logo 1.4s ease-in-out infinite;
+}
+
 /* Multi-level menu */
 .mega-menu {
   position: absolute;
