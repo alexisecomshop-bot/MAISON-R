@@ -1,6 +1,9 @@
+"use client";
+
 // Pulsing-logo loading screen. Used as the Suspense fallback for route
 // segments (loading.tsx files) so the Maison R logo shows while a page or
-// search result loads.
+// search result loads. Marked "use client" because we attach an onError
+// handler to fall back to the wordmark when /logo.png is missing.
 
 export function LoadingLogo({ label = "Chargement" }: { label?: string }) {
   return (
