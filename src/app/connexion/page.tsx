@@ -18,14 +18,23 @@ export default function ConnexionPage() {
 
   async function oauth(provider: "google") {
     setError("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    if (error) setError(error.message);
+    setInfo("");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      });
+      if (error) setError(error.message);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `Connexion impossible : ${e.message}`
+          : "Connexion impossible (configuration manquante)",
+      );
+    }
   }
 
   async function emailAuth(e: React.FormEvent) {
