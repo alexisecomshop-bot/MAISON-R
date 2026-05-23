@@ -1,7 +1,13 @@
 import Link from "next/link";
 import type { SiteSettings } from "@/lib/types";
 
-export function Footer({ settings }: { settings: SiteSettings }) {
+export function Footer({
+  settings,
+  isAdmin,
+}: {
+  settings: SiteSettings;
+  isAdmin: boolean;
+}) {
   return (
     <footer className="border-t border-black/10 mt-20">
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-10 text-sm">
@@ -41,7 +47,9 @@ export function Footer({ settings }: { settings: SiteSettings }) {
           <div className="uppercase tracking-wider text-xs mb-3">Infos</div>
           <ul className="space-y-2">
             <li><Link href="/contact">Nous contacter</Link></li>
-            <li><Link href="/admin">Admin</Link></li>
+            {isAdmin && (
+              <li><Link href="/admin">Admin</Link></li>
+            )}
           </ul>
         </div>
       </div>

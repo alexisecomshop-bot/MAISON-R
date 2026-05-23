@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getSettings, settingsToCssVars } from "@/lib/theme";
+import { checkIsAdmin } from "@/lib/is-admin-server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -21,15 +22,15 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getSettings();
+  const [settings, isAdmin] = await Promise.all([getSettings(), checkIsAdmin()]);
   const style = settingsToCssVars(settings) as CSSProperties;
 
   return (
     <html lang="fr">
       <body style={style}>
-        <Header settings={settings} />
+        <Header settings={settings} isAdmin={isAdmin} />
         <main className="min-h-[calc(100vh-200px)]">{children}</main>
-        <Footer settings={settings} />
+        <Footer settings={settings} isAdmin={isAdmin} />
       </body>
     </html>
   );

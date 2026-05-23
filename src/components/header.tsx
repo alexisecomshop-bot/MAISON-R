@@ -6,7 +6,13 @@ import { CATEGORIES } from "@/lib/categories";
 import { createClient } from "@/lib/supabase-browser";
 import type { SiteSettings } from "@/lib/types";
 
-export function Header({ settings }: { settings: SiteSettings }) {
+export function Header({
+  settings,
+  isAdmin,
+}: {
+  settings: SiteSettings;
+  isAdmin: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -93,9 +99,11 @@ export function Header({ settings }: { settings: SiteSettings }) {
           >
             <UserIcon />
           </Link>
-          <Link href="/admin" aria-label="Admin" className="opacity-60 hover:opacity-100">
-            ⚙
-          </Link>
+          {isAdmin && (
+            <Link href="/admin" aria-label="Admin" className="opacity-60 hover:opacity-100">
+              ⚙
+            </Link>
+          )}
         </div>
       </div>
 
