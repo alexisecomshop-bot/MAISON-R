@@ -21,15 +21,16 @@ export default async function ProductPage({
   if (!product) notFound();
   const p = product as Product;
 
-  const { data: blockedRows } = await supabase
-    .from("maison_r_blocked_dates")
-    .select("start_date, end_date")
-    .eq("product_id", id);
+  const { data: blockedRows } = await supabase.rpc("maison_r_blocked_dates", {
+    p_product_id: id,
+  });
 
-  const blocked = (blockedRows || []).map((r) => ({
-    start: r.start_date,
-    end: r.end_date,
-  }));
+  const blocked = ((blockedRows as { start_date: string; end_date: string }[]) || []).map(
+    (r) => ({
+      start: r.start_date,
+      end: r.end_date,
+    }),
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">

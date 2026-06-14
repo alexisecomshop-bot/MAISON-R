@@ -109,9 +109,20 @@ alter table maison_r_products enable row level security;
 alter table maison_r_reservations enable row level security;
 
 -- Helper : l'utilisateur courant est-il admin ?
-create or replace function maison_r_is_admin()
-returns boolean language sql stable as $$
-  select exists (select 1 from maison_r_admins where user_id = auth.uid());
+-- SECURITY DEFINER + search_path verrouillé : indispensable, sinon la lecture
+-- de maison_r_admins déclenche la policy de cette même table (qui appelle
+-- maison_r_is_admin) → récursion infinie. Le definer contourne la RLS pour ce
+-- seul check, et search_path = '' protège contre l'injection de schéma.
+create or replace function public.maison_r_is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.maison_r_admins where user_id = auth.uid()
+  );
 $$;
 
 -- maison_r_admins : seul un admin peut lire/écrire la liste.
@@ -146,14 +157,27 @@ create policy "maison_r_res_admin_all" on maison_r_reservations
   for all using (maison_r_is_admin()) with check (maison_r_is_admin());
 
 -- Lecture publique partielle : le calendrier d'un produit a besoin de connaître
--- les dates bloquées. On expose uniquement les colonnes dates/statut via une
--- vue dédiée (lecture anonyme OK, pas de PII client).
-create or replace view maison_r_blocked_dates as
-  select product_id, start_date, end_date, status
-  from maison_r_reservations
-  where status in ('pending', 'accepted', 'paid', 'returned');
+-- les dates déjà prises. On expose uniquement les dates (jamais de PII client)
+-- via une FONCTION security definer plutôt qu'une vue : une vue security
+-- definer contourne la RLS de façon opaque (signalé CRITICAL par Supabase).
+-- La fonction est explicite — elle ne renvoie que start_date/end_date pour un
+-- produit donné, search_path verrouillé.
+drop view if exists public.maison_r_blocked_dates;
 
-grant select on maison_r_blocked_dates to anon, authenticated;
+create or replace function public.maison_r_blocked_dates(p_product_id uuid)
+returns table (start_date date, end_date date)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select start_date, end_date
+  from public.maison_r_reservations
+  where product_id = p_product_id
+    and status in ('pending', 'accepted', 'paid', 'returned');
+$$;
+
+grant execute on function public.maison_r_blocked_dates(uuid) to anon, authenticated;
 
 -- ══════════════════════════════════════════════════════════
 -- Storage : bucket "maison-r-photos" pour les images produits.
