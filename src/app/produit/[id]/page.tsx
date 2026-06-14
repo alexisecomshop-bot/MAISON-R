@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, createAdminClient } from "@/lib/supabase-server";
 import { ReservationForm } from "@/components/reservation-form";
 import type { Product } from "@/lib/types";
 
@@ -21,16 +21,26 @@ export default async function ProductPage({
   if (!product) notFound();
   const p = product as Product;
 
-  const { data: blockedRows } = await supabase.rpc("maison_r_blocked_dates", {
-    p_product_id: id,
-  });
-
-  const blocked = ((blockedRows as { start_date: string; end_date: string }[]) || []).map(
-    (r) => ({
+  // Blocked dates are read server-side with the service-role key (never sent
+  // to the browser). We select ONLY the date columns — no customer PII — and
+  // anon never touches the reservations table directly.
+  let blocked: { start: string; end: string }[] = [];
+  try {
+    const admin = createAdminClient();
+    const { data: blockedRows } = await admin
+      .from("maison_r_reservations")
+      .select("start_date, end_date")
+      .eq("product_id", id)
+      .in("status", ["pending", "accepted", "paid", "returned"]);
+    blocked = (blockedRows || []).map((r) => ({
       start: r.start_date,
       end: r.end_date,
-    }),
-  );
+    }));
+  } catch {
+    // Service key missing → no blocked dates shown; the reservation API still
+    // rejects conflicting dates at submission, so no double-booking is possible.
+    blocked = [];
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">

@@ -156,28 +156,12 @@ drop policy if exists "maison_r_res_admin_all" on maison_r_reservations;
 create policy "maison_r_res_admin_all" on maison_r_reservations
   for all using (maison_r_is_admin()) with check (maison_r_is_admin());
 
--- Lecture publique partielle : le calendrier d'un produit a besoin de connaître
--- les dates déjà prises. On expose uniquement les dates (jamais de PII client)
--- via une FONCTION security definer plutôt qu'une vue : une vue security
--- definer contourne la RLS de façon opaque (signalé CRITICAL par Supabase).
--- La fonction est explicite — elle ne renvoie que start_date/end_date pour un
--- produit donné, search_path verrouillé.
+-- Dates bloquées du calendrier : lues CÔTÉ SERVEUR par la page produit via la
+-- service-role key (cf. src/app/produit/[id]/page.tsx), en ne sélectionnant
+-- que start_date/end_date. Le rôle anon n'a donc AUCUN accès — direct ou via
+-- fonction — à la table des réservations. Rien à exposer ici.
 drop view if exists public.maison_r_blocked_dates;
-
-create or replace function public.maison_r_blocked_dates(p_product_id uuid)
-returns table (start_date date, end_date date)
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select start_date, end_date
-  from public.maison_r_reservations
-  where product_id = p_product_id
-    and status in ('pending', 'accepted', 'paid', 'returned');
-$$;
-
-grant execute on function public.maison_r_blocked_dates(uuid) to anon, authenticated;
+drop function if exists public.maison_r_blocked_dates(uuid);
 
 -- ══════════════════════════════════════════════════════════
 -- Storage : bucket "maison-r-photos" pour les images produits.
