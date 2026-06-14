@@ -109,11 +109,15 @@ alter table maison_r_products enable row level security;
 alter table maison_r_reservations enable row level security;
 
 -- Helper : l'utilisateur courant est-il admin ?
--- SECURITY DEFINER + search_path verrouillé : indispensable, sinon la lecture
--- de maison_r_admins déclenche la policy de cette même table (qui appelle
--- maison_r_is_admin) → récursion infinie. Le definer contourne la RLS pour ce
--- seul check, et search_path = '' protège contre l'injection de schéma.
-create or replace function public.maison_r_is_admin()
+-- Placé dans un schéma PRIVÉ (non exposé par l'API REST), donc non appelable
+-- via /rest/v1/rpc. SECURITY DEFINER + search_path verrouillé : indispensable,
+-- sinon la lecture de maison_r_admins déclenche la policy de cette même table
+-- (qui appelle la fonction) → récursion infinie. Le definer contourne la RLS
+-- pour ce seul check ; search_path = '' protège contre l'injection de schéma.
+create schema if not exists private;
+grant usage on schema private to anon, authenticated, service_role;
+
+create or replace function private.maison_r_is_admin()
 returns boolean
 language sql
 stable
@@ -125,10 +129,15 @@ as $$
   );
 $$;
 
+grant execute on function private.maison_r_is_admin() to anon, authenticated, service_role;
+
+-- Retire l'ancienne version exposée dans public (signalée par l'advisor).
+drop function if exists public.maison_r_is_admin();
+
 -- maison_r_admins : seul un admin peut lire/écrire la liste.
 drop policy if exists "maison_r_admins_admin_all" on maison_r_admins;
 create policy "maison_r_admins_admin_all" on maison_r_admins
-  for all using (maison_r_is_admin()) with check (maison_r_is_admin());
+  for all using (private.maison_r_is_admin()) with check (private.maison_r_is_admin());
 
 -- maison_r_site_settings : lecture publique, écriture admin.
 drop policy if exists "maison_r_settings_public_read" on maison_r_site_settings;
@@ -136,7 +145,7 @@ create policy "maison_r_settings_public_read" on maison_r_site_settings
   for select using (true);
 drop policy if exists "maison_r_settings_admin_write" on maison_r_site_settings;
 create policy "maison_r_settings_admin_write" on maison_r_site_settings
-  for update using (maison_r_is_admin()) with check (maison_r_is_admin());
+  for update using (private.maison_r_is_admin()) with check (private.maison_r_is_admin());
 
 -- maison_r_products : lecture publique, écriture admin.
 drop policy if exists "maison_r_products_public_read" on maison_r_products;
@@ -144,7 +153,7 @@ create policy "maison_r_products_public_read" on maison_r_products
   for select using (true);
 drop policy if exists "maison_r_products_admin_write" on maison_r_products;
 create policy "maison_r_products_admin_write" on maison_r_products
-  for all using (maison_r_is_admin()) with check (maison_r_is_admin());
+  for all using (private.maison_r_is_admin()) with check (private.maison_r_is_admin());
 
 -- maison_r_reservations : AUCUNE policy publique. Les réservations sont créées
 -- exclusivement par la route serveur /api/reservations avec la service-role
@@ -154,7 +163,7 @@ create policy "maison_r_products_admin_write" on maison_r_products
 drop policy if exists "maison_r_res_public_insert" on maison_r_reservations;
 drop policy if exists "maison_r_res_admin_all" on maison_r_reservations;
 create policy "maison_r_res_admin_all" on maison_r_reservations
-  for all using (maison_r_is_admin()) with check (maison_r_is_admin());
+  for all using (private.maison_r_is_admin()) with check (private.maison_r_is_admin());
 
 -- Dates bloquées du calendrier : lues CÔTÉ SERVEUR par la page produit via la
 -- service-role key (cf. src/app/produit/[id]/page.tsx), en ne sélectionnant
