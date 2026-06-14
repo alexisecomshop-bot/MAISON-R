@@ -146,12 +146,12 @@ drop policy if exists "maison_r_products_admin_write" on maison_r_products;
 create policy "maison_r_products_admin_write" on maison_r_products
   for all using (maison_r_is_admin()) with check (maison_r_is_admin());
 
--- maison_r_reservations : insertion publique (le client réserve sans compte).
--- Lecture/écriture réservées à l'admin (les routes serveur utilisent la
--- service-role key pour confirmer/refuser via lien WhatsApp).
+-- maison_r_reservations : AUCUNE policy publique. Les réservations sont créées
+-- exclusivement par la route serveur /api/reservations avec la service-role
+-- key (qui contourne la RLS) — le navigateur ne fait qu'un POST, jamais
+-- d'insert direct. On retire donc l'ancienne policy "public insert"
+-- (with check true), inutile et signalée par l'advisor. Seul l'admin a accès.
 drop policy if exists "maison_r_res_public_insert" on maison_r_reservations;
-create policy "maison_r_res_public_insert" on maison_r_reservations
-  for insert with check (true);
 drop policy if exists "maison_r_res_admin_all" on maison_r_reservations;
 create policy "maison_r_res_admin_all" on maison_r_reservations
   for all using (maison_r_is_admin()) with check (maison_r_is_admin());
